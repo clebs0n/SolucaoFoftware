@@ -2,6 +2,7 @@ const express = require('express');
 const mysql = require('mysql2');
 
 const app = express();
+app.use("/assets",express.static("assets"));
 
 // Create a MySQL connection
 const connection = mysql.createConnection({
@@ -43,11 +44,26 @@ app.post('/', (req, res) => {
         //res.send('User authenticated.');
         res.sendFile(__dirname + '/welcome.html');
       } else {
-        console.log('User not found');
-        res.send('Username or password is incorrect.');
+        connection.query(
+          'INSERT INTO loginuser (user_name, user_pass) VALUES (?, ?)',
+          [username, password],
+          (error, results, fields) => {
+            if (error) {
+              console.error('Error inserting data: ' + error.stack);
+              res.send('An error occurred while processing your request.');
+            } else {
+              console.log('Inserted ' + results.affectedRows + ' rows');
+              res.send("Registered");
+            }
+          }
+        );
+        
+        console.log('User not found, but not registered');
+        //res.send('Username or password is incorrect.');
       }
     }
   );
+
 });
 
 const PORT = process.env.PORT || 3000;
