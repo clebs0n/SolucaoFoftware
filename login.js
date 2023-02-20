@@ -2,7 +2,8 @@ const express = require('express');
 const mysql = require('mysql2');
 
 const app = express();
-app.use("/assets",express.static("assets"));
+app.use("/cadastro_files",express.static("cadastro_files"));
+app.use("/login_files",express.static("login_files"));
 
 // Create a MySQL connection
 const connection = mysql.createConnection({
@@ -24,17 +25,44 @@ connection.connect((err) => {
 
 // Set up the HTTP server
 app.use(express.urlencoded({ extended: true }));
-app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/index.html');
-  });
 
+// Handle the index route
+app.get('/', (req, res) => {
+  res.sendFile(__dirname + '/index.html');
+});
+
+// Handle the login route
+app.get('/login', (req, res) => {
+  res.sendFile(__dirname + '/login.html');
+});
+
+// Handle the post request to register a user
 app.post('/', (req, res) => {
-  const { username, password } = req.body;
+  const { nome, email, telefone, especialidade, medicos, plano, soma } = req.body;
 
   // Check if the username and password match an existing record in the database
   connection.query(
-    'SELECT * FROM loginuser WHERE user_name = ? AND user_pass = ?',
-    [username, password],
+    'INSERT INTO cliente_bt (nome, email, telefone, esp, num_med, plano, soma) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    [nome, email, telefone, especialidade, medicos, plano, soma],
+    (error, results, fields) => {
+      if (error) {
+        console.error('Error inserting data: ' + error.stack);
+        res.send('An error occurred while processing your request.');
+      } else {
+        console.log('Inserted ' + results.affectedRows + ' rows');
+        res.send("Registered");
+      }
+    }
+  );
+});
+
+// Handle the post request to authenticate a user
+app.post('/login', (req, res) => {
+  const { email, telefone } = req.body;
+
+  connection.query(
+    'SELECT * FROM cliente_bt WHERE email = ? AND telefone = ?',
+    [email, telefone],
     (error, results, fields) => {
       if (error) {
         console.error('Error querying database: ' + error.stack);
@@ -44,26 +72,11 @@ app.post('/', (req, res) => {
         //res.send('User authenticated.');
         res.sendFile(__dirname + '/welcome.html');
       } else {
-        connection.query(
-          'INSERT INTO loginuser (user_name, user_pass) VALUES (?, ?)',
-          [username, password],
-          (error, results, fields) => {
-            if (error) {
-              console.error('Error inserting data: ' + error.stack);
-              res.send('An error occurred while processing your request.');
-            } else {
-              console.log('Inserted ' + results.affectedRows + ' rows');
-              res.send("Registered");
-            }
-          }
-        );
-        
-        console.log('User not found, but not registered');
-        //res.send('Username or password is incorrect.');
+        console.log('User not found');
+        res.send('Username or password is incorrect.');
       }
     }
   );
-
 });
 
 const PORT = process.env.PORT || 3000;
