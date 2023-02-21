@@ -1,5 +1,6 @@
 const express = require('express');
 const mysql = require('mysql2');
+const bcrypt = require('bcrypt');
 
 const app = express();
 app.use("/cadastro_files",express.static("cadastro_files"));
@@ -36,41 +37,71 @@ app.get('/login', (req, res) => {
   res.sendFile(__dirname + '/login.html');
 });
 
+app.post('/submit-form', (req, res) => {
+  const somaValue = Number(req.body.soma);
+
+  if (somaValue !== 18) {
+    return res.status(400).send('The value of "soma" must be 18.');
+  }
+
+  // validation passed, submit form data to database
+});
+
+// Handle the post request to register a user
 // Handle the post request to register a user
 app.post('/', (req, res) => {
-  const { nome, email, telefone, especialidade, medicos, plano, soma } = req.body;
+  const { nome, email, especialidade, medicos, plano, soma, check, password } = req.body;
 
-  // Check if the username and password match an existing record in the database
-  connection.query(
-    'INSERT INTO cliente_bt (nome, email, telefone, esp, num_med, plano, soma) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [nome, email, telefone, especialidade, medicos, plano, soma],
-    (error, results, fields) => {
-      if (error) {
-        console.error('Error inserting data: ' + error.stack);
-        res.send('An error occurred while processing your request.');
-      } else {
-        console.log('Inserted ' + results.affectedRows + ' rows');
-        res.send("Registered");
-      }
+  // Hash the password
+  bcrypt.hash(password, 10, (err, hash) => {
+    //console.log(hash + "  " + password);
+    if (err) {
+      console.error('Error hashing password: ' + err.stack);
+      res.send('An error occurred while processing your request.');
+    } else {
+      // Store the hashed password in the database
+      connection.query(
+        'INSERT INTO cliente_bt (nome, email, esp, num_med, plano, soma, receber_novidades, senha) VALUES (?, ?, ?, ?, ?, ?, IFNULL(?, 0), ?)',
+        [nome, email, especialidade, medicos, plano, soma, check, hash],
+        (error, results, fields) => {
+          if (error) {
+            console.error('Error inserting data: ' + error.stack);
+            res.send('An error occurred while processing your request.');
+          } else {
+            console.log('Inserted ' + results.affectedRows + ' rows');
+            res.send("Registered");
+          }
+        }
+      );
     }
-  );
+  });
 });
 
 // Handle the post request to authenticate a user
 app.post('/login', (req, res) => {
-  const { email, telefone } = req.body;
+  const { email, password } = req.body;
 
   connection.query(
-    'SELECT * FROM cliente_bt WHERE email = ? AND telefone = ?',
-    [email, telefone],
+    'SELECT * FROM cliente_bt WHERE email = ?',
+    [email],
     (error, results, fields) => {
       if (error) {
         console.error('Error querying database: ' + error.stack);
         res.send('An error occurred while processing your request.');
       } else if (results.length > 0) {
-        //console.log('User authenticated');
-        //res.send('User authenticated.');
-        res.sendFile(__dirname + '/welcome.html');
+        const user = results[0];
+        bcrypt.compare(password, user.senha, (err, result) => {
+          if (err) {
+            console.error('Error comparing passwords: ' + err.stack);
+            res.send('An error occurred while processing your request.');
+          } else if (result) {
+            console.log('User authenticated');
+            res.sendFile(__dirname + '/welcome.html');
+          } else {
+            console.log('Incorrect password');
+            res.send('Username or password is incorrect.');
+          }
+        });
       } else {
         console.log('User not found');
         res.send('Username or password is incorrect.');
@@ -78,6 +109,7 @@ app.post('/login', (req, res) => {
     }
   );
 });
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Listening on port ${PORT}...`));

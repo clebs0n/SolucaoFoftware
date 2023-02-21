@@ -28,7 +28,7 @@
 
                     <input class="input" id="email" type="email" name="email" placeholder="E-mail" required="">
 
-                    <input class="input" id="telefone" type="tel" name="telefone" placeholder="Telefone" required="">
+                    <input class="input" id="senha" type="password" name="password" placeholder="Senha" required="">
 
                     <div class="cont_esp">
                         <label class="opcoes" for="especialidade">Especialiade</label>
@@ -37,7 +37,7 @@
                             <option value="dentista">Dentista</option>
                             <option value="psicologo">Psicologo</option>
                             <option value="dermatologista">Dermatologista</option>
-                            <option value="oftamologista">Oftamologista</option>
+                            <option value="oftalmologista">Oftamologista</option>
                         </select>
                     </div>
                     <div class="cont_medicos">
@@ -62,11 +62,30 @@
                         </select>
                     </div>
 
-                    <input class="input" id="soma" type="number" name="soma" placeholder="12 + 6 = ?" required="">
+                    <input class="input" id="soma" type="number" name="soma" placeholder="12 + 6 = ?" required="18">
+                    <div class="check_box">
+                        <div>
+                          <input class="input" id="check" type="checkbox" name="check" value="1">
+                        </div>
+                        <label class="texto_check" for="check">Concordo em receber novidades via email.</label>
+                      </div>
                     <div class="botao">
-                        <button type="submit">Enviar</button>
+                        <button id="submit-btn" type="submit">Enviar</button>
                     </div>
                 </form>
+                <script>
+                    const somaInput = document.getElementById('soma');
+                    const submitBtn = document.getElementById('submit-btn');
+        
+                    somaInput.addEventListener('input', () => {
+                        const somaValue = Number(somaInput.value);
+                        if (somaValue === 18) {
+                        submitBtn.removeAttribute('disabled');
+                        } else {
+                        submitBtn.setAttribute('disabled', true);
+                        }
+                    });
+                </script>
             </div>
 
         </div>
