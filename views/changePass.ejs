@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Reset Password</title>
+  </head>
+  <body>
+    <h1>Reset Password</h1>
+    <% if (showErrorMessage) { %>
+      <p><%= errorMessage %></p>
+    <% } else { %>
+      <p>Please enter a new password below.</p>
+      <form action="/changePass" method="post">
+        <div>
+          <label for="password">New Password</label>
+          <input type="password" id="password" name="password" required />
+          <input type="hidden" name="email" value=<%= email %>>
+          <input type="hidden" name="token" value=<%= token %>>
+        </div>
+        <div>
+          <label for="confirm-password">Confirm New Password</label>
+          <input type="password" id="confirm-password" name="confirm-password" required />
+        </div>
+        <div>
+          <button type="submit">Reset Password</button>
+        </div>
+      </form>
+      <script>
+        const form = document.querySelector('form');
+        const passwordInput = document.querySelector('#password');
+        const confirmPasswordInput = document.querySelector('#confirm-password');
+
+        form.addEventListener('submit', event => {
+          if (passwordInput.value.length < 8) {
+            alert('Password must be at least 8 characters long.');
+            event.preventDefault();
+          } else if (!/[a-z]/.test(passwordInput.value)) {
+            alert('Password must contain at least one lowercase letter.');
+            event.preventDefault();
+          } else if (!/[A-Z]/.test(passwordInput.value)) {
+            alert('Password must contain at least one uppercase letter.');
+            event.preventDefault();
+          } else if (!/\d/.test(passwordInput.value)) {
+            alert('Password must contain at least one number.');
+            event.preventDefault();
+          } else if (!/[^\w\s]/.test(passwordInput.value)) {
+            alert('Password must contain at least one symbol.');
+            event.preventDefault();
+          } else if (passwordInput.value !== confirmPasswordInput.value) {
+            alert('Passwords do not match.');
+            event.preventDefault();
+          }
+        });
+      </script>
+    <% } %>
+  </body>
+</html>
