@@ -2,6 +2,10 @@ const express = require('express');
 const mysql = require('mysql2');
 const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
+const passport = require('passport');
+const LocalStrategy = require('passport-local').Strategy;
+const session = require('express-session');
+const flash = require('connect-flash');
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -16,6 +20,15 @@ const app = express();
 app.use("/cadastro_files",express.static("cadastro_files"));
 app.use("/login_files",express.static("login_files"));
 app.set('view engine', 'ejs');
+
+app.use(session({
+  secret: 'your-secret-key',
+  resave: false,
+  saveUninitialized: false
+}));
+app.use(passport.initialize());
+app.use(passport.session());
+app.use(flash());
 
 // Create a MySQL connection
 const connection = mysql.createConnection({
@@ -39,12 +52,20 @@ app.use(express.urlencoded({ extended: true }));
 
 // Handle the index route
 app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/index.html');
+  if (req.isAuthenticated()) {
+    return res.sendFile(__dirname + '/welcome.html'); // Send the welcome page if authenticated
+  }else {
+    res.sendFile(__dirname + '/index.html');
+  }
 });
 
 // Handle the login route
 app.get('/login', (req, res) => {
-  res.render('login', { showErrorMessage: false });
+  if (req.isAuthenticated()) {
+    return res.sendFile(__dirname + '/welcome.html'); // Send the welcome page if authenticated
+  } else{
+    res.render('login', { showErrorMessage: false });
+  }
 });
 
 app.get('/password-reset', (req, res) => {
@@ -77,6 +98,103 @@ app.get('/passChanged', (req, res) => {
   res.render('passChanged');
 });
 
+app.get('/custos', (req, res) => {
+  const sql = 'SELECT * FROM custos';
+
+  connection.query(sql, (err, results) => {
+    if (err) {
+      console.error('Error executing the query:', err);
+      res.status(500).send('Internal Server Error');
+      return;
+    }
+
+    // Render the retrieved data in an HTML list
+    let html = '<ul>';
+    results.forEach((row) => {
+      const dataRegistro = new Date(row.data_registro).toLocaleDateString('pt-BR');
+      html += `<li>Cliente: ${row.cliente_bt_id} | Data Registro: ${dataRegistro} | Descrição: ${row.descricao}</li>`;
+    });
+    html += '</ul>';
+
+    res.send(html);
+  });
+});
+
+passport.serializeUser((user, done) => {
+  done(null, user.email);
+});
+
+passport.deserializeUser((email, done) => {
+  connection.query(
+    'SELECT * FROM cliente_bt WHERE email = ?',
+    [email],
+    (error, results, fields) => {
+      if (error) {
+        console.error('Error querying database:', error);
+        return done(error);
+      }
+
+      if (results.length > 0) {
+        const user = results[0];
+        return done(null, user);
+      } else {
+        return done(new Error('User not found'));
+      }
+    }
+  );
+});
+
+
+app.post('/login', passport.authenticate('local', {
+  successRedirect: '/welcome',
+  failureRedirect: '/login',
+  failureFlash: true
+}));
+
+app.get('/welcome', (req, res) => {
+  if (req.isAuthenticated()) {
+    return res.sendFile(__dirname + '/welcome.html'); // Send the welcome page if authenticated
+  }
+  // Handle the case when user is not authenticated
+  res.redirect('/login');
+});
+
+
+
+passport.use(new LocalStrategy({
+  usernameField: 'email',
+  passwordField: 'password'
+}, (email, password, done) => {
+  connection.query(
+    'SELECT * FROM cliente_bt WHERE email = ?',
+    [email],
+    (error, results, fields) => {
+      if (error) {
+        console.error('Error querying database:', error);
+        return done(error);
+      }
+
+      if (results.length > 0) {
+        const user = results[0];
+        bcrypt.compare(password, user.senha, (err, result) => {
+          if (err) {
+            console.error('Error comparing passwords:', err);
+            return done(err);
+          } else if (result) {
+            console.log('User authenticated' + user.email);
+            
+            return done(null, user);
+          } else {
+            console.log("auto");
+            return done(null, false, { message: 'Incorrect password' });
+          }
+        });
+      } else {
+        return done(null, false, { message: 'User not found' });
+      }
+    }
+  );
+}));
 
 
 app.post('/submit-form', (req, res) => {
@@ -89,7 +207,6 @@ app.post('/submit-form', (req, res) => {
   // validation passed, submit form data to database
 });
 
-// Handle the post request to register a user
 // Handle the post request to register a user
 app.post('/', (req, res) => {
   const { nome, email, especialidade, medicos, plano, soma, check, password } = req.body;
@@ -117,40 +234,6 @@ app.post('/', (req, res) => {
       );
     }
   });
-});
-
-// Handle the post request to authenticate a user
-app.post('/login', (req, res) => {
-  const { email, password } = req.body;
-
-  connection.query(
-    'SELECT * FROM cliente_bt WHERE email = ?',
-    [email],
-    (error, results, fields) => {
-      if (error) {
-        console.error('Error querying database: ' + error.stack);
-        res.send('An error occurred while processing your request.');
-      } else if (results.length > 0) {
-        const user = results[0];
-        bcrypt.compare(password, user.senha, (err, result) => {
-          if (err) {
-            console.error('Error comparing passwords: ' + err.stack);
-            res.send('An error occurred while processing your request.');
-          } else if (result) {
-            console.log('User authenticated');
-            res.sendFile(__dirname + '/welcome.html');
-          } else {
-            //console.log('Incorrect password');
-            //res.send('Username or password is incorrect.');
-            res.render('login', { error: 'Tente novamente', showErrorMessage: true });
-          }
-        });
-      } else {
-        //console.log('User not found' + email + password);
-        res.render('login', { error: 'Tente novamente', showErrorMessage: true });
-      }
-    }
-  );
 });
 
 app.post('/password-reset', (req, res) => {
