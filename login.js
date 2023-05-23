@@ -49,6 +49,7 @@ connection.connect((err) => {
 
 // Set up the HTTP server
 app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
 // Handle the index route
 app.get('/', (req, res) => {
@@ -99,26 +100,39 @@ app.get('/passChanged', (req, res) => {
 });
 
 app.get('/custos', (req, res) => {
-  const sql = 'SELECT * FROM custos';
+  if (req.isAuthenticated()) {
+    const email = req.user.email; // Get the email of the authenticated user
 
-  connection.query(sql, (err, results) => {
-    if (err) {
-      console.error('Error executing the query:', err);
-      res.status(500).send('Internal Server Error');
-      return;
-    }
+    const sql = 'SELECT * FROM custos WHERE cliente_bt_id = ?'; // Add the WHERE clause to filter results
+    connection.query(sql, [email], (err, results) => {
+      if (err) {
+        console.error('Error executing the query:', err);
+        res.status(500).send('Internal Server Error');
+        return;
+      }
 
-    // Render the retrieved data in an HTML list
-    let html = '<ul>';
-    results.forEach((row) => {
-      const dataRegistro = new Date(row.data_registro).toLocaleDateString('pt-BR');
-      html += `<li>Cliente: ${row.cliente_bt_id} | Data Registro: ${dataRegistro} | Descrição: ${row.descricao}</li>`;
+      // Format the dates as DD/MM/YYYY
+      const formattedResults = results.map((row) => {
+        const formattedDataRegistro = formatDate(row.data_registro);
+        const formattedDataSaida = formatDate(row.data_saida);
+        return { ...row, data_registro: formattedDataRegistro, data_saida: formattedDataSaida };
+      });
+
+      // Render the custos.html template with the formatted results
+      res.render('custos', { custos: formattedResults });
     });
-    html += '</ul>';
-
-    res.send(html);
-  });
+  } else {
+    res.redirect('/login');
+  }
 });
+
+// Helper function to format the date as DD/MM/YYYY
+function formatDate(date) {
+  const options = { day: '2-digit', month: '2-digit', year: 'numeric' };
+  const formattedDate = new Date(date).toLocaleDateString('pt-BR', options);
+  return formattedDate;
+}
+
 
 passport.serializeUser((user, done) => {
   done(null, user.email);
@@ -325,6 +339,53 @@ app.post('/changePass', (req, res) => {
     }
   });
 });
+
+// Handle the saveEntry route
+app.post('/save-entry', (req, res) => {
+  const { dataRegistro, dataSaida, descricao, quantidade, valorUnit, valorTotal } = req.body;
+  const userEmail = req.user.email; // Assuming the email is stored in req.user.email
+
+  // Insert the entry into the MySQL database
+  const insertQuery = `INSERT INTO custos (data_registro, data_saida, descricao, quantidade, valor_unit, valor_total, cliente_bt_id) VALUES (?, ?, ?, ?, ?, ?, ?)`;
+  const insertValues = [dataRegistro, dataSaida, descricao, quantidade, valorUnit, valorTotal, userEmail];
+
+  connection.query(insertQuery, insertValues, (error, insertResult) => {
+    if (error) {
+      console.error('Error saving entry:', error);
+      res.status(500).json({ error: 'An error occurred while saving the entry' });
+    } else {
+      console.log('Entry saved successfully');
+      
+      // Retrieve the newly added entry from the database
+      const fetchQuery = 'SELECT * FROM custos WHERE id = ?'; // Assuming 'id' is the primary key column in your table
+      const fetchValues = [insertResult.insertId]; // 'insertResult.insertId' contains the auto-generated ID of the inserted row
+
+      connection.query(fetchQuery, fetchValues, (fetchError, fetchResult) => {
+        if (fetchError) {
+          console.error('Error fetching data:', fetchError);
+          res.status(500).json({ error: 'An error occurred while fetching the data' });
+        } else {
+          // Format the dates as DD/MM/YYYY
+          const formattedDataRegistro = formatDate(fetchResult[0].data_registro);
+          const formattedDataSaida = formatDate(fetchResult[0].data_saida);
+          
+          // Create a newCusto object with the formatted date values
+          const newCusto = {
+            ...fetchResult[0],
+            data_registro: formattedDataRegistro,
+            data_saida: formattedDataSaida
+          };
+          
+          // Send the newly added entry as the response
+          res.status(200).json({ custo: newCusto });
+        }
+      });
+    }
+  });
+});
+
+
+
 
 
 
