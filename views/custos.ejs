@@ -11,6 +11,7 @@
       height: 400px;
       overflow: auto;
     }
+    
 
     table {
       border-collapse: collapse;
@@ -73,6 +74,132 @@
     }
   </style>
   <script>
+    function deleteEntries() {
+  var table = document.getElementById('custosTable');
+  var checkboxes = table.getElementsByClassName('delete-checkbox');
+  var rowsToDelete = [];
+
+  // Find the rows marked for deletion
+  for (var i = checkboxes.length - 1; i >= 0; i--) {
+    if (checkboxes[i].checked) {
+      var row = checkboxes[i].closest('tr');
+      var id = checkboxes[i].getAttribute('data-id');
+      rowsToDelete.push(id);
+      row.parentNode.removeChild(row);
+    }
+  }
+
+  // Send the IDs of the rows marked for deletion to the backend
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', '/delete-entries', true);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.onreadystatechange = function () {
+    if (xhr.readyState === 4) {
+      if (xhr.status === 200) {
+        console.log('Entries deleted successfully');
+      } else {
+        console.error('Error deleting entries:', xhr.status, xhr.responseText);
+      }
+    }
+  };
+  xhr.send(JSON.stringify({ ids: rowsToDelete }));
+}
+
+function deleteEntries() {
+  var table = document.getElementById('custosTable');
+  var checkboxes = table.getElementsByClassName('delete-checkbox');
+  var rowsToDelete = [];
+
+  // Find the rows marked for deletion
+  for (var i = checkboxes.length - 1; i >= 0; i--) {
+    if (checkboxes[i].checked) {
+      var row = checkboxes[i].closest('tr');
+      var id = checkboxes[i].getAttribute('data-id');
+      rowsToDelete.push(id);
+      row.parentNode.removeChild(row);
+    }
+  }
+
+  // Send the IDs of the rows marked for deletion to the backend
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', '/delete-entries', true);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.onreadystatechange = function () {
+    if (xhr.readyState === 4) {
+      if (xhr.status === 200) {
+        console.log('Entries deleted successfully');
+      } else {
+        console.error('Error deleting entries:', xhr.status, xhr.responseText);
+      }
+    }
+  };
+  xhr.send(JSON.stringify({ ids: rowsToDelete }));
+}
+
+
+  function sortTable(columnIndex) {
+  var table = document.getElementById("custosTable");
+  var rows = Array.from(table.rows).slice(1); // Exclude the header row
+
+  rows.sort(function(a, b) {
+    var aValue, bValue;
+
+    switch (columnIndex) {
+      case 0: // Data Registro
+      case 1: // Data Saída
+        aValue = parseDate(a.cells[columnIndex].innerHTML);
+        bValue = parseDate(b.cells[columnIndex].innerHTML);
+        break;
+      case 3: // Quantidade
+      case 5: // Valor Total
+      case 4: // Valor Unitário
+        aValue = parseFloat(a.cells[columnIndex].innerHTML.replace(",", "."));
+        bValue = parseFloat(b.cells[columnIndex].innerHTML.replace(",", "."));
+        break;
+    }
+
+    return aValue - bValue;
+  });
+
+  // Clear the existing rows
+  while (table.rows.length > 1) {
+    table.deleteRow(1);
+  }
+
+  // Re-insert the rows in the sorted order
+  rows.forEach(function(row) {
+    table.appendChild(row);
+  });
+}
+
+function parseDate(dateString) {
+  var dateParts = dateString.split("/");
+  return new Date(dateParts[2], dateParts[1] - 1, dateParts[0]).getTime();
+}
+
+
+function resetTable() {
+  var table = document.getElementById("custosTable");
+  var rows = Array.from(table.rows).slice(1); // Exclude the header row
+
+  rows.sort(function(a, b) {
+    var aIndex = parseInt(a.getAttribute("data-index"));
+    var bIndex = parseInt(b.getAttribute("data-index"));
+    return aIndex - bIndex;
+  });
+
+  // Clear the existing rows
+  while (table.rows.length > 1) {
+    table.deleteRow(1);
+  }
+
+  // Re-insert the rows in the initial order
+  rows.forEach(function(row) {
+    table.appendChild(row);
+  });
+}
+
+
     function filterTable() {
       var input, filter, table, tr, td, i, txtValue;
       input = document.getElementById("searchInput");
@@ -102,6 +229,8 @@
       var selectedOption = document.getElementById("filterColumn").value;
       var dateInputContainer = document.getElementById("dateInputContainer");
       var searchButton = document.getElementById("searchButton");
+
+      searchButton.classList.remove("searched");
 
       if (selectedOption === "data_registro" || selectedOption === "data_saida") {
         dateInputContainer.style.display = "block";
@@ -155,23 +284,23 @@
   }
   
   // Retrieve the newly added entry from the table and create the newCusto object
-  var filteredRows = Array.from(tr).filter(row => row.style.display === "");
+  var filteredRows = Array.from(tr).filter(row => row.style.display !== "none");
   var newCusto = {};
 
-if (filteredRows.length > 0) {
-  var tdList = filteredRows[0].getElementsByTagName("td");
-  newCusto = {
-    data_registro: tdList[0]?.textContent || tdList[0]?.innerText,
-    data_saida: tdList[1]?.textContent || tdList[1]?.innerText,
-    descricao: tdList[2]?.textContent || tdList[2]?.innerText,
-    quantidade: tdList[3]?.textContent || tdList[3]?.innerText,
-    valor_unit: tdList[4]?.textContent || tdList[4]?.innerText,
-    valor_total: tdList[5]?.textContent || tdList[5]?.innerText
-  };
+  if (filteredRows.length > 0) {
+    var tdList = filteredRows[0].getElementsByTagName("td");
+    newCusto = {
+      data_registro: tdList[0]?.textContent || tdList[0]?.innerText,
+      data_saida: tdList[1]?.textContent || tdList[1]?.innerText,
+      descricao: tdList[2]?.textContent || tdList[2]?.innerText,
+      quantidade: tdList[3]?.textContent || tdList[3]?.innerText,
+      valor_unit: tdList[4]?.textContent || tdList[4]?.innerText,
+      valor_total: tdList[5]?.textContent || tdList[5]?.innerText
+    };
+  }
+  
+  //console.log("New Custo:", newCusto);
 }
-
-console.log("New Custo:", newCusto);
-
 
 
     function openModal() {
@@ -188,7 +317,6 @@ console.log("New Custo:", newCusto);
       var descricaoInput = document.getElementById("descricaoInput");
       var quantidadeInput = document.getElementById("quantidadeInput");
       var valorUnitInput = document.getElementById("valorUnitInput");
-      var valorTotalInput = document.getElementById("valorTotalInput");
 
       var dataRegistro = dataRegistroInput.value;
       var dataSaida = dataSaidaInput.value;
@@ -201,7 +329,9 @@ console.log("New Custo:", newCusto);
       var descricao = descricaoInput.value;
       var quantidade = quantidadeInput.value;
       var valorUnit = valorUnitInput.value;
-      var valorTotal = valorTotalInput.value;
+
+      // Calculate valorTotal
+      var valorTotal = (parseFloat(quantidade) * parseFloat(valorUnit)).toFixed(2);
 
       var xhr = new XMLHttpRequest();
 
@@ -209,45 +339,40 @@ console.log("New Custo:", newCusto);
       xhr.setRequestHeader("Content-Type", "application/json");
 
       xhr.onload = function () {
-  if (xhr.status === 200) {
-    var response = JSON.parse(xhr.responseText);
-    var newCusto = response.custo;
+        if (xhr.status === 200) {
+          var response = JSON.parse(xhr.responseText);
+          var newCusto = response.custo;
 
-    // Append the newly added row to the end of the table
-    var table = document.getElementById("custosTable");
-    var newRow = table.insertRow(table.rows.length);
-    var cell1 = newRow.insertCell(0);
-    var cell2 = newRow.insertCell(1);
-    var cell3 = newRow.insertCell(2);
-    var cell4 = newRow.insertCell(3);
-    var cell5 = newRow.insertCell(4);
-    var cell6 = newRow.insertCell(5);
+          // Append the newly added row to the end of the table
+          var table = document.getElementById("custosTable");
+          var newRow = table.insertRow(table.rows.length);
+          var cell1 = newRow.insertCell(0);
+          var cell2 = newRow.insertCell(1);
+          var cell3 = newRow.insertCell(2);
+          var cell4 = newRow.insertCell(3);
+          var cell5 = newRow.insertCell(4);
+          var cell6 = newRow.insertCell(5);
 
-    // Assign the formatted values to the table cells
-    cell1.innerHTML = newCusto.data_registro;
-    cell2.innerHTML = newCusto.data_saida;
-    cell3.innerHTML = newCusto.descricao;
-    cell4.innerHTML = newCusto.quantidade;
-    cell5.innerHTML = newCusto.valor_unit;
-    cell6.innerHTML = newCusto.valor_total;
+          // Assign the formatted values to the table cells
+          cell1.innerHTML = newCusto.data_registro;
+          cell2.innerHTML = newCusto.data_saida;
+          cell3.innerHTML = newCusto.descricao;
+          cell4.innerHTML = newCusto.quantidade;
+          cell5.innerHTML = newCusto.valor_unit;
+          cell6.innerHTML = newCusto.valor_total;
 
-    var filterInput = document.getElementById("searchInput");
-if (filterInput.value !== "") {
-  newRow.style.display = "none";
-}
+          // Clear the input values
+          dataRegistroInput.value = "";
+          dataSaidaInput.value = "";
+          descricaoInput.value = "";
+          quantidadeInput.value = "";
+          valorUnitInput.value = "";
 
-    // Clear the input values
-    dataRegistroInput.value = "";
-    dataSaidaInput.value = "";
-    descricaoInput.value = "";
-    quantidadeInput.value = "";
-    valorUnitInput.value = "";
-    valorTotalInput.value = "";
-  } else {
-    // Handle the error response
-  }
-};
-
+          closeModal();
+        } else {
+          // Handle the error response
+        }
+      };
 
       var requestBody = JSON.stringify({
         dataRegistro: dataRegistro,
@@ -262,6 +387,7 @@ if (filterInput.value !== "") {
 
       closeModal();
     }
+    
   </script>
 </head>
 <body>
@@ -269,8 +395,9 @@ if (filterInput.value !== "") {
   <div class="table-container">
     <table id="custosTable">
       <tr>
-        <th colspan="6">
+        <th colspan="7">
           <button onclick="openModal()" style="float: left;">Button Left</button>
+          <button onclick="resetTable()">Reset Sorting</button>
           <div style="float: right;">
             <select id="filterColumn" onchange="showDateInput(); filterTable();">
               <option value="2">Descrição</option>
@@ -294,21 +421,27 @@ if (filterInput.value !== "") {
         </th>
       </tr>
       <tr>
-        <th>Data de Registro</th>
-        <th>Data de Saída</th>
-        <th>Descrição</th>
-        <th>Quantidade</th>
-        <th>Valor Unitário</th>
-        <th>Valor Total</th>
+        <th onclick="sortTable(0)">Data de Registro</th>
+        <th onclick="sortTable(1)">Data de Saída</th>
+        <th onclick="sortTable(2)">Descrição</th>
+        <th onclick="sortTable(3)">Quantidade</th>
+        <th onclick="sortTable(4)">Valor Unitário</th>
+        <th onclick="sortTable(5)">Valor Total</th>
+        <th>
+          <button onclick="deleteEntries()">Delete</button>
+        </th>
       </tr>
-      <% custos.forEach((custo) => { %>
-        <tr>
+      <% custos.forEach((custo, index) => { %>
+        <tr id="row<%= index %>">
           <td><%= custo.data_registro %></td>
           <td><%= custo.data_saida %></td>
           <td><%= custo.descricao %></td>
           <td><%= custo.quantidade %></td>
           <td><%= custo.valor_unit %></td>
           <td><%= custo.valor_total %></td>
+          <td>
+            <input type="checkbox" class="delete-checkbox" data-id="<%= custo.id %>">
+          </td>
         </tr>
       <% }); %>
     </table>
@@ -328,8 +461,6 @@ if (filterInput.value !== "") {
       <input type="number" id="quantidadeInput">
       <label for="valorUnitInput">Valor Unitário:</label>
       <input type="number" step="0.01" id="valorUnitInput">
-      <label for="valorTotalInput">Valor Total:</label>
-      <input type="number" step="0.01" id="valorTotalInput">
       <button onclick="closeModal()">Cancel</button>
       <button onclick="saveEntry()">Save</button>
     </div>
