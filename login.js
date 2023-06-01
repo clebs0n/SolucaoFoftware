@@ -342,8 +342,11 @@ app.post('/changePass', (req, res) => {
 
 // Handle the saveEntry route
 app.post('/save-entry', (req, res) => {
-  const { dataRegistro, dataSaida, descricao, quantidade, valorUnit, valorTotal } = req.body;
+  const { dataRegistro, dataSaida, descricao, quantidade, valorUnit } = req.body;
   const userEmail = req.user.email; // Assuming the email is stored in req.user.email
+
+  // Calculate the total value
+  const valorTotal = quantidade * valorUnit;
 
   // Insert the entry into the MySQL database
   const insertQuery = `INSERT INTO custos (data_registro, data_saida, descricao, quantidade, valor_unit, valor_total, cliente_bt_id) VALUES (?, ?, ?, ?, ?, ?, ?)`;
@@ -385,7 +388,74 @@ app.post('/save-entry', (req, res) => {
 });
 
 
+app.post('/delete-entries', (req, res) => {
+  const { ids } = req.body;
 
+  // Delete the rows with the specified IDs from the MySQL database
+  const deleteQuery = 'DELETE FROM custos WHERE id IN (?)';
+  const deleteValues = [ids];
+
+  connection.query(deleteQuery, deleteValues, (error, deleteResult) => {
+    if (error) {
+      console.error('Error deleting entries:', error);
+      res.status(500).json({ error: 'An error occurred while deleting the entries' });
+    } else {
+      console.log('Entries deleted successfully');
+      res.status(200).json({ message: 'Entries deleted successfully' });
+    }
+  });
+});
+
+
+app.post('/save-entry-fat', (req, res) => {
+  const { data, paciente, cpf, plano, procedimento, situacao, valor, pagamento, parcelamento, bandeira, taxa, desconto, valor_liq } = req.body;
+  const userEmail = req.user.email; // Assuming the email is stored in req.user.email
+
+  // Insert the entry into the MySQL database
+  const insertQuery = `INSERT INTO faturamento (data, paciente, cpf, plano, procedimento, situacao, valor, pagamento, parcelamento, bandeira, taxa, desconto, valor_liq, cliente_bt_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  const insertValues = [data, paciente, cpf, plano, procedimento, situacao, valor, pagamento, parcelamento, bandeira, taxa, desconto, valor_liq, userEmail];
+
+  connection.query(insertQuery, insertValues, (error, insertResult) => {
+    if (error) {
+      console.error('Error saving entry:', error);
+      res.status(500).json({ error: 'An error occurred while saving the entry' });
+    } else {
+      console.log('Entry saved successfully');
+      
+      // Retrieve the newly added entry from the database
+      const fetchQuery = 'SELECT * FROM faturamento WHERE id = ?'; // Assuming 'id' is the primary key column in your table
+      const fetchValues = [insertResult.insertId]; // 'insertResult.insertId' contains the auto-generated ID of the inserted row
+
+      connection.query(fetchQuery, fetchValues, (fetchError, fetchResult) => {
+        if (fetchError) {
+          console.error('Error fetching data:', fetchError);
+          res.status(500).json({ error: 'An error occurred while fetching the data' });
+        } else {
+          // Send the newly added entry as the response
+          res.status(200).json({ faturamento: fetchResult[0] });
+        }
+      });
+    }
+  });
+});
+
+app.post('/delete-entries-fat', (req, res) => {
+  const { ids } = req.body;
+
+  // Delete the rows with the specified IDs from the MySQL database
+  const deleteQuery = 'DELETE FROM faturamento WHERE id IN (?)';
+  const deleteValues = [ids];
+
+  connection.query(deleteQuery, deleteValues, (error, deleteResult) => {
+    if (error) {
+      console.error('Error deleting entries:', error);
+      res.status(500).json({ error: 'An error occurred while deleting the entries' });
+    } else {
+      console.log('Entries deleted successfully');
+      res.status(200).json({ message: 'Entries deleted successfully' });
+    }
+  });
+});
 
 
 
