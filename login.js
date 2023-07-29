@@ -126,6 +126,32 @@ app.get('/custos', (req, res) => {
   }
 });
 
+app.get('/faturamento', (req, res) => {
+  if (req.isAuthenticated()) {
+    const email = req.user.email; // Get the email of the authenticated user
+
+    const sql = 'SELECT * FROM faturamento WHERE cliente_bt_id = ?'; // Add the WHERE clause to filter results
+    connection.query(sql, [email], (err, results) => {
+      if (err) {
+        console.error('Error executing the query:', err);
+        res.status(500).send('Internal Server Error');
+        return;
+      }
+
+      // Format the dates as DD/MM/YYYY
+      const formattedResults = results.map((row) => {
+        const formattedData = formatDate(row.data);
+        return { ...row, data: formattedData };
+      });
+
+      // Render the custos.html template with the formatted results
+      res.render('faturamento', { faturamento: formattedResults });
+    });
+  } else {
+    res.redirect('/login');
+  }
+});
+
 // Helper function to format the date as DD/MM/YYYY
 function formatDate(date) {
   const options = { day: '2-digit', month: '2-digit', year: 'numeric' };
@@ -387,6 +413,69 @@ app.post('/save-entry', (req, res) => {
   });
 });
 
+app.post('/save-entry-fat', (req, res) => {
+  if (req.isAuthenticated()) {
+    const email = req.user.email;
+    const {
+      data,
+      paciente,
+      cpf,
+      plano,
+      procedimento,
+      situacao,
+      valor,
+      pagamento,
+      parcelamento,
+      bandeira,
+      taxa,
+      desconto,
+      valorLiq,
+    } = req.body;
+
+    // Additional validation if required
+    if (!data || !paciente || !cpf || !plano || !procedimento || !situacao || !valor || !pagamento || !parcelamento || !bandeira || !taxa || !desconto || !valorLiq) {
+      res.status(400).json({ error: 'All fields are required.' });
+      return;
+    }
+
+    const sql = 'INSERT INTO faturamento (data, paciente, cpf, plano, procedimento, situacao, valor, pagamento, parcelamento, bandeira, taxa, desconto, valor_liq, cliente_bt_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+    connection.query(
+      sql,
+      [data, paciente, cpf, plano, procedimento, situacao, valor, pagamento, parcelamento, bandeira, taxa, desconto, valorLiq, email],
+      (err, result) => {
+        if (err) {
+          console.error('Error executing the query:', err);
+          res.status(500).json({ error: 'Internal Server Error' });
+          return;
+        }
+
+        const newEntry = {
+          data: data,
+          paciente: paciente,
+          cpf: cpf,
+          plano: plano,
+          procedimento: procedimento,
+          situacao: situacao,
+          valor: valor,
+          pagamento: pagamento,
+          parcelamento: parcelamento,
+          bandeira: bandeira,
+          taxa: taxa,
+          desconto: desconto,
+          valor_liq: valorLiq,
+          cliente_bt_id: email,
+          id: result.insertId, // The newly inserted row's ID
+        };
+
+        res.status(200).json({ custo: newEntry });
+      }
+    );
+  } else {
+    res.status(401).json({ error: 'Unauthorized' });
+  }
+});
+
+
 
 app.post('/delete-entries', (req, res) => {
   const { ids } = req.body;
@@ -442,11 +531,13 @@ app.post('/save-entry-fat', (req, res) => {
 app.post('/delete-entries-fat', (req, res) => {
   const { ids } = req.body;
 
-  // Delete the rows with the specified IDs from the MySQL database
+  // Here, you need to replace 'faturamento' with the correct table name in your MySQL database
   const deleteQuery = 'DELETE FROM faturamento WHERE id IN (?)';
   const deleteValues = [ids];
 
-  connection.query(deleteQuery, deleteValues, (error, deleteResult) => {
+  // Execute the delete query using your database connection
+  // Replace 'connection' with your actual MySQL connection variable
+  connection.query(deleteQuery, [deleteValues], (error, deleteResult) => {
     if (error) {
       console.error('Error deleting entries:', error);
       res.status(500).json({ error: 'An error occurred while deleting the entries' });
@@ -456,6 +547,7 @@ app.post('/delete-entries-fat', (req, res) => {
     }
   });
 });
+
 
 
 
