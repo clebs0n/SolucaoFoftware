@@ -74,36 +74,6 @@
     }
   </style>
   <script>
-    function deleteEntries() {
-  var table = document.getElementById('custosTable');
-  var checkboxes = table.getElementsByClassName('delete-checkbox');
-  var rowsToDelete = [];
-
-  // Find the rows marked for deletion
-  for (var i = checkboxes.length - 1; i >= 0; i--) {
-    if (checkboxes[i].checked) {
-      var row = checkboxes[i].closest('tr');
-      var id = checkboxes[i].getAttribute('data-id');
-      rowsToDelete.push(id);
-      row.parentNode.removeChild(row);
-    }
-  }
-
-  // Send the IDs of the rows marked for deletion to the backend
-  var xhr = new XMLHttpRequest();
-  xhr.open('POST', '/delete-entries', true);
-  xhr.setRequestHeader('Content-Type', 'application/json');
-  xhr.onreadystatechange = function () {
-    if (xhr.readyState === 4) {
-      if (xhr.status === 200) {
-        console.log('Entries deleted successfully');
-      } else {
-        console.error('Error deleting entries:', xhr.status, xhr.responseText);
-      }
-    }
-  };
-  xhr.send(JSON.stringify({ ids: rowsToDelete }));
-}
 
 function deleteEntries() {
   var table = document.getElementById('custosTable');
@@ -179,25 +149,24 @@ function parseDate(dateString) {
 
 
 function resetTable() {
-  var table = document.getElementById("custosTable");
-  var rows = Array.from(table.rows).slice(1); // Exclude the header row
+      var table = document.getElementById("custosTable");
+      var rows = Array.from(table.rows).slice(1); // Exclude the header row
 
-  rows.sort(function(a, b) {
-    var aIndex = parseInt(a.getAttribute("data-index"));
-    var bIndex = parseInt(b.getAttribute("data-index"));
-    return aIndex - bIndex;
-  });
+      rows.sort(function(a, b) {
+        var aIndex = parseInt(a.getAttribute("data-index"));
+        var bIndex = parseInt(b.getAttribute("data-index"));
+        return aIndex - bIndex;
+      });
 
-  // Clear the existing rows
-  while (table.rows.length > 1) {
-    table.deleteRow(1);
-  }
+      // Clear the existing rows
+      while (table.rows.length > 1) {
+        table.deleteRow(1);
+      }
 
-  // Re-insert the rows in the initial order
-  rows.forEach(function(row) {
-    table.appendChild(row);
-  });
-}
+      rows.forEach(function(row) {
+        table.appendChild(row);
+      });
+    }
 
 
     function filterTable() {
@@ -432,7 +401,7 @@ function resetTable() {
         </th>
       </tr>
       <% custos.forEach((custo, index) => { %>
-        <tr id="row<%= index %>">
+        <tr id="row<%= index %>" data-index="<%= index %>">
           <td><%= custo.data_registro %></td>
           <td><%= custo.data_saida %></td>
           <td><%= custo.descricao %></td>
