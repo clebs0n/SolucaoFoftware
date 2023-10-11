@@ -21,6 +21,7 @@ app.use("/cadastro_files",express.static("cadastro_files"));
 app.use("/login_files",express.static("login_files"));
 app.set('view engine', 'ejs');
 
+
 app.use(session({
   secret: 'your-secret-key',
   resave: false,
@@ -67,6 +68,12 @@ app.get('/login', (req, res) => {
   } else{
     res.render('login', { showErrorMessage: false });
   }
+});
+
+app.get('/graph', (req, res) => {
+  // You can fetch your data from the server here and pass it to the template
+  // For simplicity, we will use static data directly in the template
+  res.render('graph');
 });
 
 app.get('/password-reset', (req, res) => {
@@ -152,6 +159,72 @@ app.get('/faturamento', (req, res) => {
   }
 });
 
+// ... (other code)
+
+// Handle the fin_dashboard route
+// Handle the fin_dashboard route
+// ... (other code)
+
+// ... (other code)
+// ... (other code)
+
+app.get('/fin_dashboard', (req, res) => {
+  if (req.isAuthenticated()) {
+    const email = req.user.email; // Get the email of the authenticated user
+
+    // Fetch the payment method counts from the database
+    const sql = 'SELECT pagamento, COUNT(*) AS count FROM faturamento WHERE cliente_bt_id = ? GROUP BY pagamento';
+    connection.query(sql, [email], (err, results) => {
+      if (err) {
+        console.error('Error executing the query:', err);
+        res.status(500).send('Internal Server Error');
+        return;
+      }
+
+      // Extract labels (payment methods) and counts from the query results
+      const labels = results.map((row) => row.pagamento);
+      const counts = results.map((row) => row.count);
+
+      // Calculate the total valor_liq (total paid for the clients)
+      const totalValorLiqSql = 'SELECT SUM(valor_liq) AS totalValorLiq FROM faturamento WHERE cliente_bt_id = ?';
+      connection.query(totalValorLiqSql, [email], (err, totalLiqResults) => {
+        if (err) {
+          console.error('Error executing the query:', err);
+          res.status(500).send('Internal Server Error');
+          return;
+        }
+
+        const totalValorLiq = totalLiqResults[0].totalValorLiq;
+
+        // Fetch the planos and their counts from the database
+        const planoSql = 'SELECT plano, COUNT(*) AS count FROM faturamento WHERE cliente_bt_id = ? GROUP BY plano';
+        connection.query(planoSql, [email], (err, planoResults) => {
+          if (err) {
+            console.error('Error executing the query:', err);
+            res.status(500).send('Internal Server Error');
+            return;
+          }
+
+          // Extract labels (planos) and counts from the query results
+          const planoLabels = planoResults.map((row) => row.plano);
+          const planoCounts = planoResults.map((row) => row.count);
+
+          res.render('fin_dashboard', { email, labels, counts, totalValorLiq, planoLabels, planoCounts }); // Pass data to EJS template
+        });
+      });
+    });
+  } else {
+    res.redirect('/login');
+  }
+});
+
+
+app.get('/client', (req, res) => {
+    res.render('client');
+});
+
+
+
 // Helper function to format the date as DD/MM/YYYY
 function formatDate(date) {
   const options = { day: '2-digit', month: '2-digit', year: 'numeric' };
@@ -198,6 +271,203 @@ app.get('/welcome', (req, res) => {
   // Handle the case when user is not authenticated
   res.redirect('/login');
 });
+
+app.get('/client_table', (req, res) => {
+  if (req.isAuthenticated()) {
+    res.render('client_table');
+  } else {
+    res.status(401).send('Unauthorized');
+  }
+});
+
+app.get('/api/client_table', (req, res) => {
+  if (req.isAuthenticated()) {
+    const email = req.user.email; // Get the email of the authenticated user
+
+    const sql = 'SELECT * FROM pacientes WHERE cliente_bt_id = ?';
+    connection.query(sql, [email], (err, results) => {
+      if (err) {
+        console.error('Error executing the query:', err);
+        res.status(500).send('Internal Server Error');
+        return;
+      }
+
+      res.status(200).json(results);
+    });
+  } else {
+    res.status(401).send('Unauthorized');
+  }
+});
+
+app.put('/api/client_table/:cpf', (req, res) => {
+  if (req.isAuthenticated()) {
+    const cpf = req.params.cpf;
+    const pacienteData = req.body;
+
+    const sql = 'UPDATE pacientes SET ? WHERE cpf = ?';
+    connection.query(sql, [pacienteData, cpf], (err, results) => {
+      if (err) {
+        console.log(err);
+        console.error('Error executing the query:', err);
+        res.status(500).send('Internal Server Error');
+        return;
+      }
+
+      res.status(200).send('Paciente updated successfully');
+    });
+  } else {
+    res.status(401).send('Unauthorized');
+  }
+});
+
+app.delete('/api/client_table/:cpf', (req, res) => {
+  if (req.isAuthenticated()) {
+    const cpf = req.params.cpf;
+
+    const sql = 'DELETE FROM pacientes WHERE cpf = ?';
+    connection.query(sql, [cpf], (err, results) => {
+      if (err) {
+        console.error('Error executing the query:', err);
+        res.status(500).send('Internal Server Error');
+        return;
+      }
+
+      res.status(200).send('Paciente deleted successfully');
+    });
+  } else {
+    res.status(401).send('Unauthorized');
+  }
+});
+
+app.get('/api/consultas_table', (req, res) => {
+  if (req.isAuthenticated()) {
+    const email = req.user.email; // Get the email of the authenticated user
+
+    const sql = 'SELECT * FROM consultas WHERE cliente_bt_id = ?';
+    connection.query(sql, [email], (err, results) => {
+      if (err) {
+        console.error('Error executing the query:', err);
+        res.status(500).send('Internal Server Error');
+        return;
+      }
+
+      res.status(200).json(results);
+    });
+  } else {
+    res.status(401).send('Unauthorized');
+  }
+});
+
+app.delete('/api/consultas_table/:id', (req, res) => {
+  if (req.isAuthenticated()) {
+    const id = req.params.id;
+
+    const sql = 'DELETE FROM consultas WHERE id = ?';
+    connection.query(sql, [id], (err, results) => {
+      if (err) {
+        console.error('Error executing the query:', err);
+        res.status(500).send('Internal Server Error');
+        return;
+      }
+
+      res.status(200).send('Consulta deleted successfully');
+    });
+  } else {
+    res.status(401).send('Unauthorized');
+  }
+});
+
+
+app.put('/api/consultas_table/:id', (req, res) => {
+  if (req.isAuthenticated()) {
+    const id = req.params.id;
+    const consultaData = req.body;
+
+    const sql = 'UPDATE consultas SET ? WHERE id = ?';
+    connection.query(sql, [consultaData, id], (err, results) => {
+      if (err) {
+        console.log(err);
+        console.error('Error executing the query:', err);
+        res.status(500).send('Internal Server Error');
+        return;
+      }
+
+      res.status(200).send('Consulta updated successfully');
+    });
+  } else {
+    res.status(401).send('Unauthorized');
+  }
+});
+
+app.get('/produtos_table', (req, res) => {
+  if (req.isAuthenticated()) {
+    res.render('produtos_table');
+  } else {
+    res.status(401).send('Unauthorized');
+  }
+});
+
+app.get('/api/produtos_table', (req, res) => {
+  if (req.isAuthenticated()) {
+    const email = req.user.email; // Get the email of the authenticated user
+
+    const sql = 'SELECT * FROM produtos WHERE cliente_bt_id = ?';
+    connection.query(sql, [email], (err, results) => {
+      if (err) {
+        console.error('Error executing the query:', err);
+        res.status(500).send('Internal Server Error');
+        return;
+      }
+
+      res.status(200).json(results);
+    });
+  } else {
+    res.status(401).send('Unauthorized');
+  }
+});
+
+app.put('/api/produtos_table/:id', (req, res) => {
+  if (req.isAuthenticated()) {
+    const id = req.params.id;
+    const produtoData = req.body;
+
+    const sql = 'UPDATE produtos SET ? WHERE id = ?';
+    connection.query(sql, [produtoData, id], (err, results) => {
+      if (err) {
+        console.log(err);
+        console.error('Error executing the query:', err);
+        res.status(500).send('Internal Server Error');
+        return;
+      }
+
+      res.status(200).send('Product updated successfully');
+    });
+  } else {
+    res.status(401).send('Unauthorized');
+  }
+});
+
+app.delete('/api/produtos_table/:id', (req, res) => {
+  if (req.isAuthenticated()) {
+    const id = req.params.id;
+
+    const sql = 'DELETE FROM produtos WHERE id = ?';
+    connection.query(sql, [id], (err, results) => {
+      if (err) {
+        console.error('Error executing the query:', err);
+        res.status(500).send('Internal Server Error');
+        return;
+      }
+
+      res.status(200).send('Product deleted successfully');
+    });
+  } else {
+    res.status(401).send('Unauthorized');
+  }
+});
+
+
+
 
 
 
@@ -546,6 +816,108 @@ app.post('/delete-entries-fat', (req, res) => {
       res.status(200).json({ message: 'Entries deleted successfully' });
     }
   });
+});
+
+app.post('/client', (req, res) => {
+  console.log("chegou errado");
+  if (req.isAuthenticated()) {
+    const email = req.user.email; // Get the email of the authenticated user
+    const formData = req.body;
+
+    const sql = 'INSERT INTO pacientes SET ?';
+    connection.query(sql, [{...formData, cliente_bt_id: email}], (err, results) => {
+      if (err) {
+        console.error('Error executing the query:', err);
+        res.status(500).send('Internal Server Error');
+        return;
+      }
+
+      res.status(200).send('Data inserted successfully.');
+    });
+  } else {
+    res.status(401).send('Unauthorized');
+  }
+});
+
+app.post('/api/consultas_table', (req, res) => {
+  if (req.isAuthenticated()) {
+    const email = req.user.email; // Get the email of the authenticated user
+    const formData = req.body;
+
+    const sql = 'INSERT INTO consultas SET ?';
+    connection.query(sql, [{ ...formData, cliente_bt_id: email }], (err, results) => {
+      if (err) {
+        console.error('Error executing the query:', err);
+        res.status(500).send('Internal Server Error');
+        return;
+      }
+
+      res.status(200).send('Data inserted successfully.');
+    });
+  } else {
+    res.status(401).send('Unauthorized');
+  }
+});
+
+app.post('/api/produtos_table', (req, res) => {
+  if (req.isAuthenticated()) {
+    const email = req.user.email; // Get the email of the authenticated user
+    const produtoData = req.body;
+
+    const sql = 'INSERT INTO produtos SET ?';
+    connection.query(sql, [{ ...produtoData, cliente_bt_id: email }], (err, results) => {
+      if (err) {
+        console.error('Error executing the query:', err);
+        res.status(500).send('Internal Server Error');
+        return;
+      }
+
+      res.status(200).send('Produto cadastrado com sucesso');
+    });
+  } else {
+    res.status(401).send('Unauthorized');
+  }
+});
+
+
+app.post('/api/produtos_table/entrada/:id', (req, res) => {
+  if (req.isAuthenticated()) {
+    const id = req.params.id;
+    const quantidade = req.body.quantidade;
+
+    const sql = 'UPDATE produtos SET quantidade = quantidade + ? WHERE id = ?';
+    connection.query(sql, [quantidade, id], (err, results) => {
+      if (err) {
+        console.error('Error executing the query:', err);
+        res.status(500).send('Internal Server Error');
+        return;
+      }
+
+      res.status(200).send('Entrada registrada com sucesso');
+    });
+  } else {
+    res.status(401).send('Unauthorized');
+  }
+});
+
+app.post('/api/produtos_table/saida/:id', (req, res) => {
+  if (req.isAuthenticated()) {
+    const id = req.params.id;
+    const quantidade = req.body.quantidade;
+
+    const sql = 'UPDATE produtos SET quantidade = GREATEST(0, quantidade - ?) WHERE id = ?';
+    connection.query(sql, [quantidade, id], (err, results) => {
+      if (err) {
+        console.error('Error executing the query:', err);
+        res.status(500).send('Internal Server Error');
+        return;
+      }
+
+      res.status(200).send('Saída registrada com sucesso');
+    });
+  } else {
+    res.status(401).send('Unauthorized');
+  }
 });
 
 
