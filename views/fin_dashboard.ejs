@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Financial Dashboard</title>
+  <!-- Add the Chart.js library to your EJS template -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .chart-container {
+      width: 400px;
+      height: 400px;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>Welcome, <%= email %></h1>
+
+  <div>
+    <h2>Total Paid for Clients: <%= totalValorLiq %></h2>
+  </div>
+
+  <!-- Create a canvas element to render the pie chart -->
+  <div class="chart-container">
+    <canvas id="pieChart" width="400" height="400"></canvas>
+  </div>
+
+  <div class="chart-container">
+    <canvas id="halfDoughnutChart" width="400" height="400"></canvas>
+  </div>
+
+  <!-- JavaScript to create the pie chart using Chart.js -->
+  <script>
+    // Static colors for the half-doughnut chart
+    const staticColors = ['lightblue', 'lightgreen', 'orange', 'pink', 'purple', 'yellow', 'red'];
+
+    const planoLabels = <%- JSON.stringify(planoLabels) %>;
+    const planoCounts = <%- JSON.stringify(planoCounts) %>;
+
+    // Create the half-doughnut chart
+    new Chart(document.getElementById('halfDoughnutChart'), {
+      type: 'doughnut',
+      data: {
+        labels: planoLabels,
+        datasets: [{
+          data: planoCounts,
+          backgroundColor: staticColors.slice(0, planoLabels.length),
+        }],
+      },
+      options: {
+        rotation: -90,
+        circumference: 180,
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '50%',
+        legend: {
+          position: 'right',
+          labels: {
+            fontColor: 'black',
+            fontSize: 12,
+          }
+        },
+        title: {
+          display: true,
+          text: 'Planos',
+          fontSize: 20,
+          fontColor: 'black',
+          padding: 10,
+        },
+        elements: {
+          arc: {
+            borderWidth: 0,
+            borderRadius: 5,
+            spacing: 5,
+          },
+        },
+      }
+    });
+
+    const labels = <%- JSON.stringify(labels) %>;
+    const counts = <%- JSON.stringify(counts) %>;
+
+    // Create the pie chart
+    new Chart(document.getElementById('pieChart'), {
+      type: 'doughnut',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: counts,
+          backgroundColor: staticColors.slice(0, labels.length),
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        legend: {
+          position: 'right',
+          labels: {
+            fontColor: 'black',
+            fontSize: 12,
+          }
+        },
+        title: {
+          display: true,
+          text: 'Payment Methods',
+          fontSize: 20,
+          fontColor: 'black',
+          padding: 10,
+        },
+        elements: {
+          arc: {
+            borderWidth: 0,
+            borderRadius: 5,
+            spacing: 5,
+          },
+        },
+      }
+    });
+  </script>
+</body>
+</html>
